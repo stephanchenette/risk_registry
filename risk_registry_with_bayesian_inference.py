@@ -9,12 +9,11 @@ Update Likelihoods: Updates the likelihoods of risks based on the new evidence.
 Add New Risk Function: Defines an add_risk function to add new risks to the registry and update the DataFrame.
 Example Usage: Updates the registry with new evidence and prints the updated registry, then adds a new risk and prints the registry with the new risk added.
 """
-
 import pandas as pd
 
 # Define the structure of the risk registry
 class Risk:
-    def __init__(self, risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls):
+    def __init__(self, risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls, control_effectiveness):
         self.risk_id = risk_id
         self.description = description
         self.threat_source = threat_source
@@ -23,25 +22,28 @@ class Risk:
         self.updated_likelihood = prior_likelihood
         self.risk_owner = risk_owner
         self.current_controls = current_controls
+        self.control_effectiveness = control_effectiveness  # A measure of how effective the controls are
 
 # Create a list to hold the risks
 risk_registry = []
 
-# Add initial risks
-risk_registry.append(Risk(1, "Phishing Attack", "External", "High", 0.3, "IT Security", ["Email Filtering", "Training"]))
-risk_registry.append(Risk(2, "Data Breach", "External/Internal", "Critical", 0.4, "IT Security", ["Access Controls", "Encryption"]))
-risk_registry.append(Risk(3, "Ransomware", "External", "Critical", 0.2, "IT Security", ["Anti-Malware", "Backups"]))
+# Add initial risks with control effectiveness (scale 0 to 1)
+risk_registry.append(Risk(1, "Phishing Attack", "External", "High", 0.3, "IT Security", ["Email Filtering", "Training"], 0.7))
+risk_registry.append(Risk(2, "Data Breach", "External/Internal", "Critical", 0.4, "IT Security", ["Access Controls", "Encryption"], 0.6))
+risk_registry.append(Risk(3, "Ransomware", "External", "Critical", 0.2, "IT Security", ["Anti-Malware", "Backups"], 0.8))
 
 # Convert to DataFrame for easier manipulation
 risk_df = pd.DataFrame([vars(risk) for risk in risk_registry])
 
 # Function for Bayesian Inference
-def update_likelihood(prior, likelihood_given_evidence, evidence_probability):
+def update_likelihood(prior, likelihood_given_evidence, evidence_probability, control_effectiveness):
     """
     Update the likelihood using Bayesian Inference.
+    Adjust based on control effectiveness.
     P(A|B) = (P(B|A) * P(A)) / P(B)
     """
-    return (likelihood_given_evidence * prior) / evidence_probability
+    adjusted_prior = prior * (1 - control_effectiveness)  # Adjust prior by control effectiveness
+    return (likelihood_given_evidence * adjusted_prior) / evidence_probability
 
 # Example evidence data
 # This should come from actual evidence or data in a real-world scenario
@@ -51,25 +53,26 @@ new_evidence = {
     3: {"likelihood_given_evidence": 0.8, "evidence_probability": 0.3}   # Ransomware
 }
 
-# Update likelihoods based on new evidence
+# Update likelihoods based on new evidence and control effectiveness
 for risk_id, evidence in new_evidence.items():
     risk_index = risk_df[risk_df['risk_id'] == risk_id].index[0]
     prior = risk_df.at[risk_index, 'prior_likelihood']
     likelihood_given_evidence = evidence['likelihood_given_evidence']
     evidence_probability = evidence['evidence_probability']
-    updated_likelihood = update_likelihood(prior, likelihood_given_evidence, evidence_probability)
+    control_effectiveness = risk_df.at[risk_index, 'control_effectiveness']
+    updated_likelihood = update_likelihood(prior, likelihood_given_evidence, evidence_probability, control_effectiveness)
     risk_df.at[risk_index, 'updated_likelihood'] = updated_likelihood
 
-print("Updated Risk Registry with Bayesian Inference:")
+print("Updated Risk Registry with Bayesian Inference and Control Effectiveness:")
 print(risk_df)
 
 # Function to add a new risk
-def add_risk(risk_registry, risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls):
-    new_risk = Risk(risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls)
+def add_risk(risk_registry, risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls, control_effectiveness):
+    new_risk = Risk(risk_id, description, threat_source, potential_impact, prior_likelihood, risk_owner, current_controls, control_effectiveness)
     risk_registry.append(new_risk)
     return pd.DataFrame([vars(risk) for risk in risk_registry])
 
 # Example of adding a new risk
-risk_df = add_risk(risk_registry, 4, "Insider Threat", "Internal", "High", 0.15, "HR Security", ["Background Checks", "Monitoring"])
+risk_df = add_risk(risk_registry, 4, "Insider Threat", "Internal", "High", 0.15, "HR Security", ["Background Checks", "Monitoring"], 0.5)
 print("Risk Registry after Adding New Risk:")
 print(risk_df)
